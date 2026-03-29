@@ -46,8 +46,12 @@ class MyAccessBDD extends AccessBDD {
             case "etat" :
                 // select portant sur une table contenant juste id et libelle
                 return $this->selectTableSimple($table);
-            case "" :
-                // return $this->uneFonction(parametres);
+            case "suivi" :
+                return $this->selectAllSuivi($champs);
+            case "abonnement" :
+                return $this->selectAllAbonnement($champs);
+            case "finAbonnement":
+                return $this->selectAllFinAbonnement();
             default:
                 // cas général
                 return $this->selectTuplesOneTable($table, $champs);
@@ -63,8 +67,10 @@ class MyAccessBDD extends AccessBDD {
      */	
     protected function traitementInsert(string $table, ?array $champs) : ?int{
         switch($table){
-            case "" :
-                // return $this->uneFonction(parametres);
+            case "suivi" :
+                return $this->insertNewSuivi($champs);
+            case "abonnement" :
+                return $this->insertNewAbonnement($champs);
             default:                    
                 // cas général
                 return $this->insertOneTupleOneTable($table, $champs);	
@@ -81,8 +87,10 @@ class MyAccessBDD extends AccessBDD {
      */	
     protected function traitementUpdate(string $table, ?string $id, ?array $champs) : ?int{
         switch($table){
-            case "" :
-                // return $this->uneFonction(parametres);
+            case "suivi" :
+                return $this->updateSuivi($champs);
+            case "abonnement" :
+                return $this->updateAbonnement($champs);
             default:                    
                 // cas général
                 return $this->updateOneTupleOneTable($table, $id, $champs);
@@ -98,8 +106,10 @@ class MyAccessBDD extends AccessBDD {
      */	
     protected function traitementDelete(string $table, ?array $champs) : ?int{
         switch($table){
-            case "" :
-                // return $this->uneFonction(parametres);
+            case "suivi" :
+                return $this->deleteSuivi($champs);
+            case "abonnement" :
+                return $this->deleteAbonnement($champs);
             default:                    
                 // cas général
                 return $this->deleteTuplesOneTable($table, $champs);	
@@ -155,7 +165,130 @@ class MyAccessBDD extends AccessBDD {
         $requete .= ");";
         return $this->conn->updateBDD($requete, $champs);
     }
+    
+    private function insertNewSuivi(?array $champs) : ?int{
+        
+        if(empty($champs)){
+            return null;
+        }
 
+        $id = $champs["IdCommandeDocument"];
+        $dateCommande = $champs["DateCommande"];
+        $montant = $champs["Montant"];
+        $nbExemplaire = $champs["NbExemplaire"];
+        $etat = $champs["Etat"];
+        $dateSuivi = $champs["DateSuivi"];
+
+        $requete = "SELECT MAX(id) AS maxId FROM commande;";
+        $maxId = $this->conn->queryBDD($requete);
+        $maxId = intval($maxId[0]["maxId"] ?? 0) + 1;
+
+        $requete = "INSERT INTO commande VALUES ($maxId, '$dateCommande', $montant);";
+        $this->conn->updateBDD($requete);
+
+        $requete = "INSERT INTO commandedocument VALUES ($maxId, $nbExemplaire, '$id');";
+        $this->conn->updateBDD($requete);
+
+        $requete = "INSERT INTO suivi(etat, dateSuivi, idCommandeDocument) 
+                    VALUES ('$etat', '$dateSuivi', '$maxId');";
+        $this->conn->updateBDD($requete);
+
+        return $maxId;
+    }
+    
+    private function insertNewAbonnement(?array $champs) : ?int{
+        if(empty($champs)){
+            return null;
+        }
+        
+        $idRevue = $champs["IdRevue"];
+        $dateFinAbonnement = $champs["DateFinAbonnement"];
+        $dateCommande = $champs["DateCommande"];
+        $montant = $champs["Montant"];
+        
+        $requete = "SELECT MAX(id) AS maxId FROM commande;";
+        $maxId = $this->conn->queryBDD($requete);
+        $maxId = intval($maxId[0]["maxId"] ?? 0) + 1;
+        
+        $requete = "INSERT INTO commande VALUES ('$maxId', '$dateCommande','$montant');";
+        $this->conn->updateBDD($requete);
+        
+        $requete = "INSERT INTO abonnement VALUES ('$maxId', '$dateFinAbonnement', '$idRevue');";
+        $this->conn->updateBDD($requete);
+        
+        return $maxId;
+    }
+
+    private function updateSuivi(?array $champs) : ?int{
+        if(empty($champs)){
+            return null;
+        }
+        
+        $idCommande = $champs["IdCommande"];
+        $idSuivi = $champs["Id"];
+        $montant = $champs["Montant"];
+        $nbExemplaire = $champs["NbExemplaire"];
+        $etat = $champs["Etat"];
+        $dateSuivi = $champs["DateSuivi"];
+        
+        $requete = "UPDATE commande SET montant = $montant WHERE id = $idCommande;";
+        $this->conn->updateBDD($requete);
+        
+        $requete = "UPDATE commandedocument SET nbExemplaire = $nbExemplaire WHERE id = $idCommande;";
+        $this->conn->updateBDD($requete);
+        
+        $requete = "UPDATE suivi SET etat = '$etat', dateSuivi = '$dateSuivi' WHERE id = $idSuivi;";
+        return $this->conn->updateBDD($requete);
+    }
+    
+    private function updateAbonnement(?array $champs) : ?int{
+        if(empty($champs)){
+            return null;
+        }
+        
+        $dateFinAbonnement = $champs["DateFinAbonnement"];
+        $montant = $champs["Montant"];
+        $idCommande = $champs["Id"];
+        
+        $requete = "UPDATE commande SET montant = $montant WHERE id = $idCommande;";
+        $this->conn->updateBDD($requete);
+        
+        $requete = "UPDATE abonnement set dateFinAbonnement = '$dateFinAbonnement' WHERE id = $idCommande;";
+        return $this->conn->updateBDD($requete);
+    }
+
+    private function deleteSuivi(?array $champs) :?int
+    {
+        
+        if(empty($champs)){
+            return null;
+        }
+        
+        $idCommande = $champs["id"];
+        
+        $requete = "DELETE FROM suivi WHERE idCommandeDocument = $idCommande";
+        $this->conn->updateBDD($requete);
+        
+        $requete = "DELETE FROM commandedocument WHERE id = $idCommande";
+        $this->conn->updateBDD($requete);
+        
+        $requete = "DELETE FROM commande WHERE id = $idCommande";
+        return $this->conn->updateBDD($requete);
+    }
+    
+    private function deleteAbonnement(?array $champs) :?int{
+        if(empty($champs)){
+            return null;
+        }
+        
+        $idCommande = $champs["id"];
+        
+        $requete = "DELETE FROM abonnement WHERE id = $idCommande";
+        $this->conn->updateBDD($requete);
+        
+        $requete = "DELETE FROM commande WHERE id = $idCommande";
+        return $this->conn->updateBDD($requete);
+    }
     /**
      * demande de modification (update) d'un tuple dans une table
      * @param string $table
@@ -277,4 +410,56 @@ class MyAccessBDD extends AccessBDD {
         return $this->conn->queryBDD($requete, $champNecessaire);
     }		    
     
+    private function selectAllSuivi(?array $champs) : ?array{
+        if(empty($champs)){
+            return null;
+        }
+        if(!array_key_exists('id', $champs)){
+            return null;
+        }
+        $champNecessaire['id'] = $champs['id'];
+        $requete = "SELECT ";
+        $requete .= "s.id, s.etat, s.dateSuivi, s.idCommandeDocument, ";
+        $requete .= "cd.nbExemplaire, cd.idLivreDvd, ";
+        $requete .= "c.id AS idCommande, c.dateCommande, c.montant ";
+        $requete .= "FROM commandedocument cd ";
+        $requete .= "JOIN suivi s ON s.idCommandeDocument = cd.id ";
+        $requete .= "JOIN commande c ON cd.id = c.id ";
+        $requete .= "WHERE cd.idLivreDvd = :id ";
+        $requete .= "ORDER BY c.dateCommande;";
+
+        return $this->conn->queryBDD($requete, $champNecessaire);
+    }
+
+    private function selectAllAbonnement(?array $champs) : ?array{
+
+        if(empty($champs)){
+            return null;
+        }
+        if(!array_key_exists('id', $champs)){
+            return null;
+        }
+        $champNecessaire['id'] = $champs['id'];
+        $requete = "SELECT ";
+        $requete .= "c.id, c.dateCommande, c.montant, ";
+        $requete .= "a.dateFinAbonnement, a.idRevue ";
+        $requete .= "FROM abonnement a ";
+        $requete .= "JOIN commande c ON a.id = c.id ";
+        $requete .= "WHERE a.idRevue = :id ";
+        $requete .= "ORDER BY c.dateCommande;";
+        
+        return $this->conn->queryBDD($requete, $champNecessaire);
+    }
+    
+    private function selectAllFinAbonnement() : ?array{
+        
+        $requete = "SELECT ";
+        $requete .= "a.dateFinAbonnement, d.titre ";
+        $requete .= "FROM abonnement a ";
+        $requete .= "JOIN document d ON d.id = a.idRevue ";
+        $requete .= "WHERE dateFinAbonnement <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) ";
+        $requete .= "ORDER BY dateFinAbonnement ASC;";
+        
+        return $this->conn->queryBDD($requete);
+    }
 }
