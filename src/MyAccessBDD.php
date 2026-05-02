@@ -1,5 +1,5 @@
 <?php
-include_once("AccessBDD.php");
+    include_once("AccessBDD.php");
 
 /**
  * Classe de construction des requêtes SQL
@@ -40,6 +40,8 @@ class MyAccessBDD extends AccessBDD {
                 return $this->selectAllRevues();
             case "exemplaire" :
                 return $this->selectExemplairesRevue($champs);
+            case "exemplaireglobal" :
+                return $this->selectExemplairesType($champs);
             case "genre" :
             case "public" :
             case "rayon" :
@@ -52,6 +54,8 @@ class MyAccessBDD extends AccessBDD {
                 return $this->selectAllAbonnement($champs);
             case "finAbonnement":
                 return $this->selectAllFinAbonnement();
+            case "connexion" :
+                return $this->selectAllConnexion($champs);
             default:
                 // cas général
                 return $this->selectTuplesOneTable($table, $champs);
@@ -67,6 +71,12 @@ class MyAccessBDD extends AccessBDD {
      */	
     protected function traitementInsert(string $table, ?array $champs) : ?int{
         switch($table){
+            case "livre" :
+                return $this->insertNouveauLivre($champs);
+            case "dvd" :
+                return $this->insertNouveauDvd($champs);
+            case "revue" :
+                return $this->insertNouveauRevue($champs);
             case "suivi" :
                 return $this->insertNewSuivi($champs);
             case "abonnement" :
@@ -91,6 +101,14 @@ class MyAccessBDD extends AccessBDD {
                 return $this->updateSuivi($champs);
             case "abonnement" :
                 return $this->updateAbonnement($champs);
+            case "livre" :
+                return $this->updateLivre($champs);
+            case "dvd" :
+                return $this->updateDvd($champs);
+            case "revue" :
+                return $this->updateRevue($champs);
+            case "exemplaireglobal":
+                return $this->updateExemplaireType($champs);
             default:                    
                 // cas général
                 return $this->updateOneTupleOneTable($table, $id, $champs);
@@ -110,12 +128,197 @@ class MyAccessBDD extends AccessBDD {
                 return $this->deleteSuivi($champs);
             case "abonnement" :
                 return $this->deleteAbonnement($champs);
+            case "livre" :
+                return $this->deleteLivre($champs);
+            case "dvd" :
+                return $this->deleteDvd($champs);
+            case "revue" :
+                return $this->deleteRevue($champs);   
+            case "exemplaireglobal" :
+                return $this->deleteExemplaireType($champs);
             default:                    
                 // cas général
                 return $this->deleteTuplesOneTable($table, $champs);	
         }
     }	    
+    
+    /**
+     * demande d'ajout (insert) d'un livre, en ajoutant les données table par table.
+     * @param array $livre
+     * @return int|null nombre de tuples ajoutés (0 ou 1) ou null si erreur
+     */	
+    public function insertNouveauLivre(array $livre): ?int {
+        try {
+            ///Insérer dans document
+            $documentData = [
+                'id' => $livre['Id'],
+                'titre' => $livre['Titre'],
+                'image' => $livre['Image'] ?? '',
+                'idRayon' => $livre['IdRayon'],
+                'idPublic' => $livre['IdPublic'],
+                'idGenre' => $livre['IdGenre']
+            ];
+            $this->insertOneTupleOneTable('document', $documentData);
+
+            ///Insérer dans livres_dvd
+            $this->insertOneTupleOneTable('livres_dvd', ['id' => $livre['Id']]);
+
+            ///Insérer dans livre
+            $livreData = [
+                'id' => $livre['Id'],
+                'ISBN' => $livre['Isbn'],
+                'auteur' => $livre['Auteur'],
+                'collection' => $livre['Collection'] ?? ''
+            ];
+            return $this->insertOneTupleOneTable('livre', $livreData);
+        } catch (Exception $e) {
+            error_log("Erreur : " . $e->getMessage());
+            return null;
+        }
+    }
+        /**
+         * demande d'ajout (insert) d'un dvd, en ajoutant les données table par table.
+         * @param array $dvd
+         * @return int|null nombre de tuples ajoutés (0 ou 1) ou null si erreur
+         */	
+    public function insertNouveauDvd(array $dvd): ?int {
+        try {
+            ///Insérer dans document
+            $documentData = [
+                'id' => $dvd['Id'],
+                'titre' => $dvd['Titre'],
+                'image' => $dvd['Image'] ?? '',
+                'idRayon' => $dvd['IdRayon'],
+                'idPublic' => $dvd['IdPublic'],
+                'idGenre' => $dvd['IdGenre']
+            ];
+            $this->insertOneTupleOneTable('document', $documentData);
+
+            ///Insérer dans livres_dvd
+            $this->insertOneTupleOneTable('livres_dvd', ['id' => $dvd['Id']]);
+
+            ///Insérer dans dvd
+            $dvdData = [
+                'id' => $dvd['Id'],
+                'duree' => $dvd['Duree'],
+                'realisateur' => $dvd['Realisateur'],
+                'synopsis' => $dvd['Synopsis'] ?? ''
+            ];
+            return $this->insertOneTupleOneTable('dvd', $dvdData);
+        } catch (Exception $e) {
+            error_log("Erreur : " . $e->getMessage());
+            return null;
+        }
+    }
+   /**
+    * demande d'ajout (insert) d'une revue, en ajoutant les données table par table.
+    * @param array $revue
+    * @return int|null nombre de tuples ajoutés (0 ou 1) ou null si erreur
+    */	
+    public function insertNouveauRevue(array $revue): ?int {
+        try {
+            ///Insérer dans document
+            $documentData = [
+                'id' => $revue['Id'],
+                'titre' => $revue['Titre'],
+                'image' => $revue['Image'] ?? '',
+                'idRayon' => $revue['IdRayon'],
+                'idPublic' => $revue['IdPublic'],
+                'idGenre' => $revue['IdGenre']
+            ];
+            $this->insertOneTupleOneTable('document', $documentData);
+
+            ///Insérer dans revues
+            $revueData = [
+                'id' => $revue['Id'],
+                'periodicite' => $revue['Periodicite'],
+                'delaiMiseADispo' => $revue['DelaiMiseADispo']
+            ];
+            return $this->insertOneTupleOneTable('revue', $revueData);
+        } catch (Exception $e) {
+            error_log("Erreur : " . $e->getMessage());
+            return null;
+        }
+    }
+    /**
+     * Récupère tous les exemplaires d'un élément typé précis
+     * @param array|null $champs
+     * @return array|null
+     */
+    private function selectExemplairesType(?array $champs) : ?array{
+        if (empty($champs) || !array_key_exists('id', $champs)) {
+            return null;
+        }
+
+        $idDocument = $champs['id'];
+        $requete = "
+            SELECT
+                e.id,
+                e.numero,
+                e.dateAchat,
+                e.photo,
+                e.idEtat,
+                et.libelle AS libelleEtat
+            FROM
+                exemplaire e
+            JOIN
+                etat et ON e.idEtat = et.id
+            JOIN
+                document d ON e.id = d.id
+            WHERE
+                e.id = :idDocument
+            ORDER BY
+                e.numero;
+        ";
+        $params = ['idDocument' => $idDocument];
+        return $this->conn->queryBDD($requete, $params);
+    }
+    /*
+     * Met à jour le type d'un exemplaire précis et donné.
+     * @param array|null $champs
+     * @return array|null
+     */
+    private function updateExemplaireType($champs) : ?int{
+        error_log("updateExemplaireType appelée avec : " . print_r($champs, true));
+        if (empty($champs)) {
+            return null;
+        }
+
         
+        $requete = "
+            UPDATE exemplaire
+            SET
+                idEtat = :idEtat
+            WHERE
+                id = :id AND numero = :numero;
+        ";
+
+        $params = [
+            'id' => $champs['Id'],
+            'numero' => $champs['Numero'],
+            'idEtat' => $champs['IdEtat']
+        ];
+
+        return $this->conn->updateBDD($requete, $params); 
+    }
+    
+    /*
+     * Supprime un exemplaire précis et donné.
+     * @param array|null $champs
+     * @return array|null
+     */
+    private function deleteExemplaireType(array $champs) : ?int{
+    $requete = "
+        DELETE FROM exemplaire
+        WHERE
+            id = :id AND numero = :numero;
+    ";
+    $params = [
+        'id' => $champs['Id'],
+        'numero' => $champs['Numero']   
+    ];
+        return $this->conn->updateBDD($requete, $params); 
+    }
     /**
      * récupère les tuples d'une seule table
      * @param string $table
@@ -166,6 +369,10 @@ class MyAccessBDD extends AccessBDD {
         return $this->conn->updateBDD($requete, $champs);
     }
     
+    /*
+     * Ajoute un nouveau suivi de commande.
+     * @param array|null $champs
+     */
     private function insertNewSuivi(?array $champs) : ?int{
         
         if(empty($champs)){
@@ -195,7 +402,10 @@ class MyAccessBDD extends AccessBDD {
 
         return $maxId;
     }
-    
+     /*
+     * Ajoute un nouvel abonnement.
+     * @param array|null $champs
+     */
     private function insertNewAbonnement(?array $champs) : ?int{
         if(empty($champs)){
             return null;
@@ -218,7 +428,10 @@ class MyAccessBDD extends AccessBDD {
         
         return $maxId;
     }
-
+     /*
+     * Met à jour un suivi de commande.
+     * @param array|null $champs
+     */
     private function updateSuivi(?array $champs) : ?int{
         if(empty($champs)){
             return null;
@@ -240,7 +453,10 @@ class MyAccessBDD extends AccessBDD {
         $requete = "UPDATE suivi SET etat = '$etat', dateSuivi = '$dateSuivi' WHERE id = $idSuivi;";
         return $this->conn->updateBDD($requete);
     }
-    
+     /*
+     * Met à jour un abonnement.
+     * @param array|null $champs
+     */
     private function updateAbonnement(?array $champs) : ?int{
         if(empty($champs)){
             return null;
@@ -256,7 +472,10 @@ class MyAccessBDD extends AccessBDD {
         $requete = "UPDATE abonnement set dateFinAbonnement = '$dateFinAbonnement' WHERE id = $idCommande;";
         return $this->conn->updateBDD($requete);
     }
-
+     /*
+     * Supprime un suivi de commande.
+     * @param array|null $champs
+     */
     private function deleteSuivi(?array $champs) :?int
     {
         
@@ -275,7 +494,10 @@ class MyAccessBDD extends AccessBDD {
         $requete = "DELETE FROM commande WHERE id = $idCommande";
         return $this->conn->updateBDD($requete);
     }
-    
+     /*
+     * Supprime un abonnement.
+     * @param array|null $champs
+     */
     private function deleteAbonnement(?array $champs) :?int{
         if(empty($champs)){
             return null;
@@ -315,6 +537,96 @@ class MyAccessBDD extends AccessBDD {
         return $this->conn->updateBDD($requete, $champs);	        
     }
     
+      /**
+     * demande de modification (update) d'un livre, en ajoutant les données table par table.
+     * @param array $livre
+     * @return int|null nombre de tuples ajoutés (0 ou 1) ou null si erreur
+     */	    
+public function updateLivre(array $livre): ?int{
+    try {
+        ///Insérer dans document
+        $documentData = [
+            'titre' => $livre['Titre'],
+            'image' => $livre['Image'] ?? '',
+            'idRayon' => $livre['IdRayon'],
+            'idPublic' => $livre['IdPublic'],
+            'idGenre' => $livre['IdGenre']
+        ];
+        $this->updateOneTupleOneTable('document', $livre['Id'], $documentData);
+
+        ///Insérer dans livre
+        $livreData = [
+            'id' => $livre['Id'],
+            'ISBN' => $livre['Isbn'],
+            'auteur' => $livre['Auteur'],
+            'collection' => $livre['Collection'] ?? ''
+        ];
+        return $this->updateOneTupleOneTable('livre', $livre['Id'], $livreData);
+    } catch (Exception $e) {
+        error_log("Erreur : " . $e->getMessage());
+        return null;
+    }    
+}
+    /**
+     * demande de modification (update) d'un dvd, en ajoutant les données table par table.
+     * @param array $dvd
+     * @return int|null nombre de tuples ajoutés (0 ou 1) ou null si erreur
+     */	    
+public function updateDvd(array $dvd): ?int{
+    try {
+        ///Insérer dans document
+        $documentData = [
+            'titre' => $dvd['Titre'],
+            'image' => $dvd['Image'] ?? '',
+            'idRayon' => $dvd['IdRayon'],
+            'idPublic' => $dvd['IdPublic'],
+            'idGenre' => $dvd['IdGenre']
+        ];
+        $this->updateOneTupleOneTable('document', $dvd['Id'], $documentData);
+
+        ///Insérer dans dvd
+        $dvdData = [
+            'id' => $dvd['Id'],
+            'duree' => $dvd['Duree'],
+            'realisateur' => $dvd['Realisateur'],
+            'synopsis' => $dvd['Synopsis'] ?? ''
+        ];
+        return $this->updateOneTupleOneTable('dvd', $dvd['Id'], $dvdData);
+    } catch (Exception $e) {
+        error_log("Erreur : " . $e->getMessage());
+        return null;
+    }
+}
+    /**
+     * demande de modification (update) d'une revue, en ajoutant les données table par table.
+     * @param array $revue
+     * @return int|null nombre de tuples ajoutés (0 ou 1) ou null si erreur
+     */	    
+public function updateRevue(array $revue): ?int{
+    try {
+        ///Insérer dans document
+        $documentData = [
+            'titre' => $revue['Titre'],
+            'image' => $revue['Image'] ?? '',
+            'idRayon' => $revue['IdRayon'],
+            'idPublic' => $revue['IdPublic'],
+            'idGenre' => $revue['IdGenre']
+        ];
+        $this->updateOneTupleOneTable('document', $revue['Id'], $documentData);
+
+        ///Insérer dans revue
+        $revueData = [
+            'id' => $revue['Id'],
+            'periodicite' => $revue['Periodicite'],
+            'delaiMiseADispo' => $revue['DelaiMiseADispo']
+        ];
+        return $this->updateOneTupleOneTable('revue', $revue['Id'], $revueData);
+    } catch (Exception $e) {
+        error_log("Erreur : " . $e->getMessage());
+        return null;
+    }
+}
+
     /**
      * demande de suppression (delete) d'un ou plusieurs tuples dans une table
      * @param string $table
@@ -334,7 +646,104 @@ class MyAccessBDD extends AccessBDD {
         $requete = substr($requete, 0, strlen($requete)-5);   
         return $this->conn->updateBDD($requete, $champs);	        
     }
- 
+  /**
+     * demande de suppression (delete) d'un livre.
+     * @param array $livre
+     * @return int|null nombre de tuples ajoutés (0 ou 1) ou null si erreur
+     */	
+    public function deleteLivre(array $livre): ?int{
+    try {
+        if (!isset($livre['Id'])) {
+            error_log("Erreur : ID du livre manquant.");
+            return null;
+        }
+        $id = $livre['Id'];
+
+        $resultLivre = $this->deleteTuplesOneTable('livre', ['id' => $id]);
+        if ($resultLivre === null) {
+            return null;
+        }
+
+        $resultLivresDvd = $this->deleteTuplesOneTable('livres_dvd', ['id' => $id]);
+        if ($resultLivresDvd === null) {
+            return null;
+        }
+
+        $resultDocument = $this->deleteTuplesOneTable('document', ['id' => $id]);
+        if ($resultDocument === null) {
+            return null;
+        }
+
+        return $resultDocument;
+    } catch (Exception $e) {
+        error_log("Erreur dans deleteLivre : " . $e->getMessage());
+        return null;
+    }
+}
+    /**
+     * demande de suppression (delete) d'un dvd.
+     * @param array $dvd
+     * @return int|null nombre de tuples ajoutés (0 ou 1) ou null si erreur
+     */	
+public function deleteDvd(array $dvd): ?int{
+    try {
+        if (!isset($dvd['Id'])) {
+            error_log("Erreur : ID du dvd manquant.");
+            return null;
+        }
+        $id = $dvd['Id'];
+
+        $resultDvd = $this->deleteTuplesOneTable('dvd', ['id' => $id]);
+        if ($resultDvd === null) {
+            return null;
+        }
+
+        $resultLivresDvd = $this->deleteTuplesOneTable('livres_dvd', ['id' => $id]);
+        if ($resultLivresDvd === null) {
+            return null;
+        }
+
+        $resultDocument = $this->deleteTuplesOneTable('document', ['id' => $id]);
+        if ($resultDocument === null) {
+            return null;
+        }
+
+        return $resultDocument;
+    } catch (Exception $e) {
+        error_log("Erreur dans deleteDvd : " . $e->getMessage());
+        return null;
+    }
+}
+    /**
+     * demande de suppression (delete) d'une revue.
+     * @param array $revue
+     * @return int|null nombre de tuples ajoutés (0 ou 1) ou null si erreur
+     */	
+public function deleteRevue(array $revue): ?int{
+    try {
+        if (!isset($revue['Id'])) {
+            error_log("Erreur : ID de la revue manquant.");
+            return null;
+        }
+        $id = $revue['Id'];
+
+        $resultRevue = $this->deleteTuplesOneTable('revue', ['id' => $id]);
+        if ($resultRevue === null) {
+            return null;
+        }
+
+        $resultDocument = $this->deleteTuplesOneTable('document', ['id' => $id]);
+        if ($resultDocument === null) {
+            return null;
+        }
+
+        return $resultDocument;
+    } catch (Exception $e) {
+        error_log("Erreur dans deleteRevue : " . $e->getMessage());
+        return null;
+    }
+}
+
     /**
      * récupère toutes les lignes d'une table simple (qui contient juste id et libelle)
      * @param string $table
@@ -460,6 +869,15 @@ class MyAccessBDD extends AccessBDD {
         $requete .= "WHERE dateFinAbonnement <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) ";
         $requete .= "ORDER BY dateFinAbonnement ASC;";
         
+        return $this->conn->queryBDD($requete);
+    }
+    
+    private function selectAllConnexion(?array $champs) : ?array{
+        
+        $data = $champs["data"];
+        $login = $data["login"];
+        $password = $data["password"];
+        $requete = "SELECT * FROM utilisateur WHERE login = '$login' AND password = '$password'";
         return $this->conn->queryBDD($requete);
     }
 }
